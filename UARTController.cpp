@@ -445,6 +445,12 @@ int CUARTController::read(unsigned char* buffer, unsigned int length)
 
 		if (n > 0) {
 			ssize_t len = ::read(m_fd, buffer + offset, length - offset);
+			// A disconnected tty remains readable, but returns EOF. Retrying
+			// it here spins forever and prevents modem recovery and shutdown.
+			if (len == 0) {
+				LogError("Serial port disconnected while reading %s", m_device.c_str());
+				return -1;
+			}
 			if (len < 0) {
 				if (errno != EAGAIN) {
 					LogError("Error from read(), errno=%d", errno);
